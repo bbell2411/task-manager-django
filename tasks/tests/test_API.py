@@ -60,4 +60,47 @@ class TaskAPITest(TestCase):
         response = self.client.get(reverse('task-list'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data),0)
+    def test_list_tasks_empty(self):
+        """Test GET empty list if user has no tasks"""
+        self.client.force_authenticate(user=self.user) 
+        response=self.client.get(reverse("task-list"))
+        self.assertEqual(response.data,[])
+        self.assertEqual(response.status_code,status.HTTP_200_OK)
+        
+    def test_get_task_by_id(self):
+        """Test to get task by id"""
+        self.client.force_authenticate(user=self.user) 
+        task1=Task.objects.create(
+            title="task1",
+            description="first task",
+            user=self.user
+            )
+        task2=Task.objects.create(
+            title="task2",
+            description="second task",
+            user=self.user
+            )
+        response=self.client.get(reverse("task-detail",kwargs={"pk":task2.id}))
+        data=response.data
+        self.assertEqual(response.status_code,status.HTTP_200_OK)
+        self.assertEqual(data["id"],2)
+        self.assertIn("id",data)
+        self.assertIn("user",data)
+        self.assertIn("title",data)
+        self.assertFalse(data["completed"])
+        self.assertEqual(data["user"],"testuser")
+    def test_get_task_by_id_404(self):
+        """Test NOT FOUND for GET task by id"""
+        self.client.force_authenticate(user=self.user) 
+        Task.objects.create(
+            title="task1",
+            description="first task",
+            user=self.user
+            )
+        response=self.client.get(reverse("task-detail",kwargs={"pk":"hey"}))
+        self.assertEqual(response.status_code,status.HTTP_404_NOT_FOUND)
+    
+        
+        
+        
         
