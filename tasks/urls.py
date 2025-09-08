@@ -4,3 +4,7 @@ from .views import TaskViewSet
 
 router = DefaultRouter()
 router.register("tasks",TaskViewSet,basename="task")
+
+urlpatterns = [
+    path('', include(router.urls)),
+] #makes the actual url path and crud op
