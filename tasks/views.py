@@ -13,5 +13,11 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
     def get_queryset(self):
-        return Task.objects.filter(user=self.request.user)
+        if self.request.user.is_authenticated:
+            return Task.objects.filter(user=self.request.user)
+        return Task.objects.none()
+    
+    #test
+    #add err handling
+    #auth/token/post login/signup
     
