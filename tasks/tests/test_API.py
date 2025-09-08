@@ -49,11 +49,19 @@ class TaskAPITest(TestCase):
         self.assertEqual(len(response.data),3)
         for task in response.data:
             jsonschema.validate(task,self.TASK_SCHEMA)
-    ## without json schema  ##
-    # first_task = response.data[0]
-    # self.assertIn('id', first_task)
-    # self.assertIn('title', first_task)
-    # self.assertEqual(first_task['user'], 'testuser')
+    
+    def test_user_only_sees_own_tasks(self):
+        """Test user can't see other users' tasks"""
+        self.client.force_authenticate(user=self.user)
+        
+        other_user = User.objects.create_user('other', 'other@test.com', 'pass')
+        Task.objects.create(title="Not mine", user=other_user)
+        Task.objects.create(title="Mine", user=self.user)
+        
+        response = self.client.get(reverse('task-list'))
+    
+        self.assertEqual(len(response.data), 1)  # Only see own task
+        self.assertEqual(response.data[0]['title'], 'Mine')
     
     def test_list_tasks_unauthenticated(self):
         """Test unauthorised user gets empty list"""
@@ -100,6 +108,61 @@ class TaskAPITest(TestCase):
         response=self.client.get(reverse("task-detail",kwargs={"pk":"hey"}))
         self.assertEqual(response.status_code,status.HTTP_404_NOT_FOUND)
     
+    def test_post_task(self):
+        """Test user can post their own task"""
+        self.client.force_authenticate(user=self.user) 
+        payload={
+            "title":"new task",
+            "description":"hey so this is my new task! :)"
+        }
+        response=self.client.post(reverse("task-list"), payload, format="json")
+        self.assertEqual(response.status_code,status.HTTP_201_CREATED)
+        self.assertEqual(response.data["title"],"new task")
+        self.assertEqual(response.data["user"],"testuser")
+        self.assertEqual(response.data["description"],"hey so this is my new task! :)")
+        self.assertIn("id",response.data)
+        self.assertFalse(response.data["completed"])
+        
+    def test_post_task_400(self):
+        """Test user cannot post if missing required fields"""
+        self.client.force_authenticate(user=self.user) 
+        payload={
+            "description":"hey so this is my new task! :)"
+        }
+        response=self.client.post(reverse("task-list"), payload, format="json")
+        self.assertEqual(response.status_code,status.HTTP_400_BAD_REQUEST)
+        
+    def test_post_task_cannot_set_user(self):
+        """Test user cannot set as a different user when posting a task"""
+        self.client.force_authenticate(user=self.user) 
+        other_user=User.objects.create_user('other', 'other@test.com', 'pass')
+        payload = {
+        "title": "Test Task",
+        "user": other_user.id  
+    }
+        response = self.client.post(reverse('task-list'), payload)
+        
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['user'], 'testuser')
+        
+    def test_post_task_invalid_completed_type(self):
+        """Test invalid data type returns 400"""
+        self.client.force_authenticate(user=self.user)
+        
+        payload = {
+            "title": "Test Task",
+            "completed": "not bool"  # Should be boolean
+        }
+        
+        response = self.client.post(reverse('task-list'), payload)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('completed', response.data)
+        
+        
+        
+        
+
         
         
         
