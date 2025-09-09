@@ -159,7 +159,25 @@ class TaskAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('completed', response.data)
         
-        
+    def test_patch_task(self):
+        """Test user can patch their tasks"""
+        self.client.force_authenticate(user=self.user)
+        task1=Task.objects.create(
+            title="task1",
+            description="first task",
+            user=self.user
+            )
+        payload={
+            "title":"patched task",
+            "description":"i patched this task"
+        }
+        response=self.client.patch(reverse("task-detail", kwargs={"pk":task1.id}),payload)
+        self.assertEqual(response.status_code,status.HTTP_200_OK)
+        self.assertEqual(response.data["title"],"patched task")
+        self.assertEqual(response.data["description"],"i patched this task")
+        self.assertEqual(response.data["user"],"testuser")
+        self.assertFalse(response.data["completed"])
+        self.assertEqual(response.data["id"],task1.id)
         
         
 
