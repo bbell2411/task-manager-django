@@ -15,3 +15,7 @@ class Task(models.Model):
     
     def __str__(self):
         return self.title
+class Favourite(models.Model):
+    title_id=models.ForeignKey(max_length=200)
+    reason= models.CharField(max_length=500)
+    
